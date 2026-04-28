@@ -3,79 +3,82 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>3D Racing (Levels 1–3 + AI Opponent)</title>
+  <title>3D Racing (All-in-One: Levels 1-3 + Opponent)</title>
   <style>
-    html, body { margin:0; padding:0; overflow:hidden; background:#000; font-family: system-ui, Segoe UI, Arial; }
-    #hud {
-      position: fixed; left: 12px; top: 12px; z-index: 10;
-      background: rgba(0,0,0,.55); color: #fff; padding: 10px 12px;
-      border-radius: 10px; line-height: 1.35; min-width: 260px;
-      backdrop-filter: blur(4px);
+    html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:system-ui,Segoe UI,Arial}
+    canvas{display:block}
+    #hud{
+      position:fixed;left:12px;top:12px;z-index:10;
+      background:rgba(0,0,0,.55);color:#fff;padding:10px 12px;border-radius:12px;
+      min-width:270px;line-height:1.35;backdrop-filter:blur(4px);
+      border:1px solid rgba(255,255,255,.12)
     }
-    #hud b { color: #9ff; }
-    #center {
-      position: fixed; inset: 0; display: grid; place-items: center; z-index: 20;
-      pointer-events: none;
+    #hud b{color:#9ff}
+    #overlay{
+      position:fixed;inset:0;display:grid;place-items:center;z-index:20;
+      background:radial-gradient(ellipse at center, rgba(0,0,0,.35), rgba(0,0,0,.75));
     }
-    #panel {
-      pointer-events: auto;
-      width: min(560px, calc(100vw - 24px));
-      background: rgba(10,10,14,.78);
-      color: #fff; padding: 18px 18px; border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.45);
-      border: 1px solid rgba(255,255,255,.12);
+    #panel{
+      width:min(640px, calc(100vw - 24px));
+      background:rgba(10,10,14,.82);
+      color:#fff;padding:18px;border-radius:16px;
+      box-shadow:0 14px 40px rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.12);
     }
-    #panel h1 { margin: 0 0 8px; font-size: 18px; }
-    #panel p { margin: 8px 0; opacity: .92; }
-    #panel code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; }
-    #btns { display:flex; gap:10px; flex-wrap: wrap; margin-top: 12px; }
-    button {
-      border: 0; border-radius: 10px; padding: 10px 12px; cursor: pointer;
-      background: #1f6feb; color: #fff; font-weight: 600;
+    #panel h1{margin:0 0 10px;font-size:18px}
+    #panel p{margin:8px 0;opacity:.92}
+    #panel code{background:rgba(255,255,255,.10);padding:2px 6px;border-radius:8px}
+    #btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{
+      border:0;border-radius:12px;padding:10px 14px;cursor:pointer;
+      background:#1f6feb;color:#fff;font-weight:700
     }
-    button.secondary { background: rgba(255,255,255,.12); }
-    .small { font-size: 12px; opacity: .85; margin-top: 10px; }
+    button.secondary{background:rgba(255,255,255,.12)}
+    .small{font-size:12px;opacity:.85;margin-top:10px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .pill{
+      display:inline-block;padding:6px 10px;border-radius:999px;
+      background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.12);
+      font-size:12px;opacity:.95
+    }
   </style>
- 
-  <!-- Import Three.js as an ES module (works on GitHub Pages) -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-      }
-    }
-  </script>
 </head>
- 
 <body>
   <div id="hud"></div>
  
-  <div id="center">
+  <div id="overlay">
     <div id="panel">
-      <h1>🏁 3D Racing — Levels 1–3 + AI Opponent</h1>
-      <p><b>Goal:</b> reach the finish distance before the opponent (and don’t crash).</p>
+      <h1 id="title">🏁 3D Racing — Levels 1–3 + AI Opponent (All in 1)</h1>
+      <p><b>Goal:</b> Reach the finish distance before the opponent. Avoid obstacles.</p>
       <p><b>Controls:</b>
-        <code>←</code><code>→</code> change lane,
+        <code>←</code><code>→</code> lane,
         <code>↑</code> accelerate,
         <code>↓</code> brake,
         <code>R</code> restart,
-        <code>1</code><code>2</code><code>3</code> jump to level.
+        <code>1</code><code>2</code><code>3</code> level.
       </p>
-      <p><b>Levels:</b> more lanes, faster speeds, more obstacles, smarter opponent.</p>
-      <div id="btns">
-        <button id="startBtn">Start (Level 1)</button>
-        <button class="secondary" id="lvl2Btn">Start Level 2</button>
-        <button class="secondary" id="lvl3Btn">Start Level 3</button>
+      <div class="row">
+        <span class="pill">Level 1: easy</span>
+        <span class="pill">Level 2: medium</span>
+        <span class="pill">Level 3: hard</span>
+        <span class="pill">Opponent changes lane to avoid obstacles</span>
       </div>
-      <div class="small">Tip: upload this file to GitHub and enable GitHub Pages to play online.</div>
+      <div id="btns">
+        <button id="start1">Start Level 1</button>
+        <button class="secondary" id="start2">Start Level 2</button>
+        <button class="secondary" id="start3">Start Level 3</button>
+      </div>
+      <div class="small">Tip: Upload this file to GitHub and enable GitHub Pages.</div>
     </div>
   </div>
  
-  <script type="module">
-    import * as THREE from "three";
+  <!-- Three.js (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
  
+  <script>
+  (() => {
     // ----------------------------
-    // CONFIG: Levels 1, 2, 3
+    // LEVEL CONFIG (1 / 2 / 3)
     // ----------------------------
     const LEVELS = {
       1: {
@@ -83,7 +86,7 @@
         lanes: 2,
         roadWidth: 7,
         finishDistance: 800,
-        obstacleRate: 0.010,   // per frame chance
+        obstacleRate: 0.010,
         baseSpeed: 0.65,
         maxSpeed: 1.05,
         accel: 0.008,
@@ -123,10 +126,11 @@
     // DOM
     // ----------------------------
     const hud = document.getElementById("hud");
-    const center = document.getElementById("center");
-    const startBtn = document.getElementById("startBtn");
-    const lvl2Btn = document.getElementById("lvl2Btn");
-    const lvl3Btn = document.getElementById("lvl3Btn");
+    const overlay = document.getElementById("overlay");
+    const title = document.getElementById("title");
+    document.getElementById("start1").onclick = () => startLevel(1);
+    document.getElementById("start2").onclick = () => startLevel(2);
+    document.getElementById("start3").onclick = () => startLevel(3);
  
     // ----------------------------
     // THREE SETUP
@@ -134,7 +138,7 @@
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87cfff);
  
-    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 600);
     camera.position.set(0, 6.5, 12);
  
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -142,23 +146,27 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
  
-    // lights
+    // Lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.55));
     const sun = new THREE.DirectionalLight(0xffffff, 0.9);
     sun.position.set(10, 20, 10);
     scene.add(sun);
  
-    // ground beyond road
+    // Grass ground
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(200, 600),
+      new THREE.PlaneGeometry(220, 700),
       new THREE.MeshStandardMaterial({ color: 0x2b7a3d })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = 0;
     scene.add(ground);
  
-    // road segments (looping)
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.9 });
+    // Road + markers container
+    const markers = new THREE.Group();
+    scene.add(markers);
+ 
+    // Road segments (loop)
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.92 });
     const roadSegments = [];
     function makeRoadSegment(width) {
       const seg = new THREE.Mesh(new THREE.PlaneGeometry(width, 120), roadMat);
@@ -167,11 +175,7 @@
       return seg;
     }
  
-    // lane markers group
-    const markers = new THREE.Group();
-    scene.add(markers);
- 
-    // cars
+    // Player & opponent cars
     const player = new THREE.Mesh(
       new THREE.BoxGeometry(1.2, 0.8, 2.2),
       new THREE.MeshStandardMaterial({ color: 0xff3b30, metalness: 0.1, roughness: 0.6 })
@@ -186,19 +190,19 @@
     opponent.position.set(0, 0.45, -6);
     scene.add(opponent);
  
-    // obstacles
+    // Obstacles
     const obstacles = [];
     const obstacleGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
-    const obstacleMat = new THREE.MeshStandardMaterial({ color: 0xffd400, roughness: 0.7 });
+    const obstacleMat = new THREE.MeshStandardMaterial({ color: 0xffd400, roughness: 0.75 });
  
     // ----------------------------
     // GAME STATE
     // ----------------------------
     let level = 1;
     let cfg = LEVELS[level];
+ 
     let running = false;
     let finished = false;
-    let message = "";
  
     let playerSpeed = 0;
     let opponentSpeed = 0;
@@ -206,58 +210,58 @@
     let playerDistance = 0;
     let opponentDistance = 0;
  
-    // lane state
-    let laneCount = cfg.lanes;
-    let laneIndexPlayer = 0;
-    let laneIndexOpp = 0;
     let laneTargetPlayer = 0;
     let laneTargetOpp = 0;
  
-    // input
+    // Input (edge press for lane)
     const keys = Object.create(null);
+    const pressed = Object.create(null);
+ 
     window.addEventListener("keydown", (e) => {
       keys[e.key] = true;
  
-      // quick level select
+      // quick level
       if (e.key === "1") startLevel(1);
       if (e.key === "2") startLevel(2);
       if (e.key === "3") startLevel(3);
  
       if (e.key.toLowerCase() === "r") startLevel(level);
     });
-    window.addEventListener("keyup", (e) => keys[e.key] = false);
+    window.addEventListener("keyup", (e) => {
+      keys[e.key] = false;
+      pressed[e.key] = false;
+    });
  
-    // buttons
-    startBtn.onclick = () => startLevel(1);
-    lvl2Btn.onclick = () => startLevel(2);
-    lvl3Btn.onclick = () => startLevel(3);
+    function edge(key) {
+      if (keys[key] && !pressed[key]) { pressed[key] = true; return true; }
+      return false;
+    }
  
     function laneX(idx) {
-      // center lanes around x=0
       const spacing = cfg.roadWidth / cfg.lanes;
       const leftMost = -cfg.roadWidth / 2 + spacing / 2;
       return leftMost + idx * spacing;
     }
  
     function rebuildRoadAndMarkers() {
-      // clear old road segments
+      // remove old road
       for (const seg of roadSegments) scene.remove(seg);
       roadSegments.length = 0;
  
-      // create 3 segments to loop
-      const segA = makeRoadSegment(cfg.roadWidth);
-      const segB = makeRoadSegment(cfg.roadWidth);
-      const segC = makeRoadSegment(cfg.roadWidth);
-      segA.position.z = 0;
-      segB.position.z = -120;
-      segC.position.z = -240;
-      roadSegments.push(segA, segB, segC);
-      scene.add(segA, segB, segC);
+      // add road segments
+      const a = makeRoadSegment(cfg.roadWidth);
+      const b = makeRoadSegment(cfg.roadWidth);
+      const c = makeRoadSegment(cfg.roadWidth);
+      a.position.z = 0;
+      b.position.z = -120;
+      c.position.z = -240;
+      roadSegments.push(a, b, c);
+      scene.add(a, b, c);
  
       // markers
       markers.clear();
-      const markerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
-      const dashGeo = new THREE.BoxGeometry(0.1, 0.05, 3);
+      const markerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
+      const dashGeo = new THREE.BoxGeometry(0.10, 0.05, 3);
  
       // lane dividers (dashed)
       for (let i = 1; i < cfg.lanes; i++) {
@@ -269,14 +273,14 @@
         }
       }
  
-      // road borders
+      // borders
       const borderMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
       const borderGeo = new THREE.BoxGeometry(0.35, 0.2, 240);
-      const leftBorder = new THREE.Mesh(borderGeo, borderMat);
-      const rightBorder = new THREE.Mesh(borderGeo, borderMat);
-      leftBorder.position.set(-cfg.roadWidth / 2 - 0.2, 0.1, -120);
-      rightBorder.position.set(cfg.roadWidth / 2 + 0.2, 0.1, -120);
-      markers.add(leftBorder, rightBorder);
+      const left = new THREE.Mesh(borderGeo, borderMat);
+      const right = new THREE.Mesh(borderGeo, borderMat);
+      left.position.set(-cfg.roadWidth / 2 - 0.2, 0.1, -120);
+      right.position.set(cfg.roadWidth / 2 + 0.2, 0.1, -120);
+      markers.add(left, right);
     }
  
     function clearObstacles() {
@@ -292,22 +296,61 @@
       obstacles.push({ mesh, lane });
     }
  
+    function aabbHit(car, box) {
+      // very simple collision
+      const ax = 1.2/2, az = 2.2/2;
+      const bx = 1.2/2, bz = 1.2/2;
+      return Math.abs(car.position.x - box.position.x) < (ax + bx) &&
+             Math.abs(car.position.z - box.position.z) < (az + bz);
+    }
+ 
+    // Opponent AI: avoid obstacles by changing lane
+    function aiChooseLane(currentLane) {
+      const lookAheadMinZ = -35;
+      const lookAheadMaxZ = -6;
+ 
+      // danger in current lane?
+      let danger = false;
+      for (const o of obstacles) {
+        const z = o.mesh.position.z;
+        if (o.lane === currentLane && z < lookAheadMaxZ && z > lookAheadMinZ) {
+          danger = true; break;
+        }
+      }
+      if (!danger) return currentLane;
+ 
+      // find closest safe lane
+      const lanes = [...Array(cfg.lanes).keys()].sort((a,b)=>Math.abs(a-currentLane)-Math.abs(b-currentLane));
+      for (const ln of lanes) {
+        let blocked = false;
+        for (const o of obstacles) {
+          const z = o.mesh.position.z;
+          if (o.lane === ln && z < lookAheadMaxZ && z > lookAheadMinZ) { blocked = true; break; }
+        }
+        if (!blocked) return ln;
+      }
+      return currentLane;
+    }
+ 
+    function showOverlay(text) {
+      title.textContent = text;
+      overlay.style.display = "grid";
+    }
+    function hideOverlay() {
+      overlay.style.display = "none";
+    }
+ 
     function startLevel(lvl) {
       level = lvl;
       cfg = LEVELS[level];
  
-      laneCount = cfg.lanes;
-      laneIndexPlayer = Math.floor(cfg.lanes / 2);
-      laneTargetPlayer = laneIndexPlayer;
- 
-      laneIndexOpp = Math.max(0, Math.min(cfg.lanes - 1, laneIndexPlayer + 1));
-      laneTargetOpp = laneIndexOpp;
+      // lane start positions
+      laneTargetPlayer = Math.floor(cfg.lanes / 2);
+      laneTargetOpp = Math.min(cfg.lanes - 1, laneTargetPlayer + 1);
  
       // reset
       running = true;
       finished = false;
-      message = "";
-      center.style.display = "none";
  
       playerSpeed = cfg.baseSpeed;
       opponentSpeed = cfg.opponentBase;
@@ -315,98 +358,136 @@
       playerDistance = 0;
       opponentDistance = 0;
  
-      player.position.set(laneX(laneIndexPlayer), 0.45, 0);
-      opponent.position.set(laneX(laneIndexOpp), 0.45, -6);
+      player.position.set(laneX(laneTargetPlayer), 0.45, 0);
+      opponent.position.set(laneX(laneTargetOpp), 0.45, -6);
  
       rebuildRoadAndMarkers();
       clearObstacles();
+      hideOverlay();
     }
  
     function endGame(text) {
       running = false;
       finished = true;
-      message = text;
-      center.style.display = "grid";
-      document.getElementById("panel").querySelector("h1").textContent = text;
-    }
- 
-    // AI: pick lane to avoid obstacles in look-ahead range
-    function aiChooseLane(currentLane) {
-      const lookAheadMinZ = -35;
-      const lookAheadMaxZ = -6;
- 
-      // detect if obstacle is in our lane soon
-      let danger = false;
-      for (const o of obstacles) {
-        const z = o.mesh.position.z;
-        if (o.lane === currentLane && z < lookAheadMaxZ && z > lookAheadMinZ) {
-          danger = true;
-          break;
-        }
-      }
-      if (!danger) return currentLane;
- 
-      // find a safer lane (prefer nearer lanes)
-      const candidates = [];
-      for (let i = 0; i < cfg.lanes; i++) candidates.push(i);
-      candidates.sort((a, b) => Math.abs(a - currentLane) - Math.abs(b - currentLane));
- 
-      for (const lane of candidates) {
-        let blocked = false;
-        for (const o of obstacles) {
-          const z = o.mesh.position.z;
-          if (o.lane === lane && z < lookAheadMaxZ && z > lookAheadMinZ) {
-            blocked = true; break;
-          }
-        }
-        if (!blocked) return lane;
-      }
-      return currentLane;
-    }
- 
-    function aabbHit(a, b) {
-      // simple bounds check
-      const ap = a.position, bp = b.position;
-      const ax = 1.2/2, az = 2.2/2;
-      const bx = 1.2/2, bz = 1.2/2;
-      return Math.abs(ap.x - bp.x) < (ax + bx) && Math.abs(ap.z - bp.z) < (az + bz);
+      showOverlay(text + "  (Press R to restart)");
     }
  
     // ----------------------------
-    // MAIN LOOP
+    // LOOP
     // ----------------------------
     function animate() {
       requestAnimationFrame(animate);
  
-      // camera follows player laterally; looks forward
+      // follow camera
       camera.position.x = THREE.MathUtils.lerp(camera.position.x, player.position.x, 0.08);
       camera.lookAt(new THREE.Vector3(player.position.x, 1.2, -18));
  
       if (running) {
-        // INPUT: lane change (debounced by key edge-ish)
-        if (keys["ArrowLeft"]) { keys["ArrowLeft"] = false; laneTargetPlayer = Math.max(0, laneTargetPlayer - 1); }
-        if (keys["ArrowRight"]) { keys["ArrowRight"] = false; laneTargetPlayer = Math.min(cfg.lanes - 1, laneTargetPlayer + 1); }
+        // lane change
+        if (edge("ArrowLeft"))  laneTargetPlayer = Math.max(0, laneTargetPlayer - 1);
+        if (edge("ArrowRight")) laneTargetPlayer = Math.min(cfg.lanes - 1, laneTargetPlayer + 1);
  
-        // INPUT: speed control
+        // speed control
         if (keys["ArrowUp"]) playerSpeed = Math.min(cfg.maxSpeed, playerSpeed + cfg.accel);
         else playerSpeed = Math.max(cfg.baseSpeed, playerSpeed - cfg.accel * 0.35);
  
         if (keys["ArrowDown"]) playerSpeed = Math.max(0.35, playerSpeed - cfg.brake);
  
-        // opponent speed follows skill (slightly reactive)
+        // opponent speed (skill)
         const desiredOpp = cfg.opponentBase + (cfg.opponentSkill * 0.15);
         opponentSpeed = THREE.MathUtils.lerp(opponentSpeed, desiredOpp, 0.01);
  
-        // distance progression
+        // distances
         playerDistance += playerSpeed * 4.0;
         opponentDistance += opponentSpeed * 4.0;
  
-        // loop road segments (move world toward camera)
+        // world scroll amount
         const dz = playerSpeed * 1.2;
+ 
+        // move road loop
         for (const seg of roadSegments) {
           seg.position.z += dz;
           if (seg.position.z > 60) seg.position.z -= 360;
         }
-        // move markers + borders group
         markers.position.z += dz;
+        if (markers.position.z > 60) markers.position.z -= 360;
+ 
+        // spawn obstacles
+        if (Math.random() < cfg.obstacleRate) spawnObstacle();
+ 
+        // move obstacles
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          obstacles[i].mesh.position.z += dz;
+          if (obstacles[i].mesh.position.z > 15) {
+            scene.remove(obstacles[i].mesh);
+            obstacles.splice(i, 1);
+          }
+        }
+ 
+        // player moves to lane center
+        player.position.x = THREE.MathUtils.lerp(player.position.x, laneX(laneTargetPlayer), 0.18);
+ 
+        // opponent AI lane
+        laneTargetOpp = aiChooseLane(laneTargetOpp);
+        opponent.position.x = THREE.MathUtils.lerp(opponent.position.x, laneX(laneTargetOpp), 0.12);
+ 
+        // opponent z relative (who is ahead)
+        const delta = opponentDistance - playerDistance;
+        opponent.position.z = THREE.MathUtils.clamp(-6 - delta / 35, -22, -2.5);
+ 
+        // collision player
+        for (const o of obstacles) {
+          if (aabbHit(player, o.mesh)) {
+            endGame("💥 You crashed!");
+            break;
+          }
+        }
+ 
+        // opponent collision => penalty (slowdown)
+        if (!finished) {
+          for (const o of obstacles) {
+            if (aabbHit(opponent, o.mesh)) opponentSpeed = Math.max(0.35, opponentSpeed - 0.25);
+          }
+        }
+ 
+        // finish check
+        if (!finished) {
+          if (playerDistance >= cfg.finishDistance && opponentDistance >= cfg.finishDistance) {
+            endGame("🤝 Photo finish!");
+          } else if (playerDistance >= cfg.finishDistance) {
+            if (level < 3) endGame(`✅ You win ${cfg.name}! Press 2/3 for next.`);
+            else endGame("🏆 You beat Level 3! You win!");
+          } else if (opponentDistance >= cfg.finishDistance) {
+            endGame("😵 Opponent wins!");
+          }
+        }
+      }
+ 
+      // HUD
+      hud.innerHTML = `
+        <div><b>${cfg.name}</b></div>
+        <div>Speed: <b>${playerSpeed.toFixed(2)}</b> | Opp: <b>${opponentSpeed.toFixed(2)}</b></div>
+        <div>Distance: <b>${Math.floor(playerDistance)}</b> / ${cfg.finishDistance}</div>
+        <div>Opponent: <b>${Math.floor(opponentDistance)}</b> / ${cfg.finishDistance}</div>
+        <div>Lanes: <b>${cfg.lanes}</b> | Obstacles: <b>${obstacles.length}</b></div>
+        <div style="opacity:.9">← → lane | ↑ accel | ↓ brake | R restart | 1/2/3 levels</div>
+      `;
+ 
+      renderer.render(scene, camera);
+    }
+ 
+    // Resize
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+ 
+    // Initial setup (menu shown)
+    rebuildRoadAndMarkers();
+    animate();
+  })();
+  </script>
+</body>
+</html>
  
