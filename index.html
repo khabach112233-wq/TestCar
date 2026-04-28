@@ -1,113 +1,412 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>3D Racing Game</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D Racing (Levels 1–3 + AI Opponent)</title>
   <style>
-    body { margin: 0; overflow: hidden; }
-    canvas { display: block; }
+    html, body { margin:0; padding:0; overflow:hidden; background:#000; font-family: system-ui, Segoe UI, Arial; }
+    #hud {
+      position: fixed; left: 12px; top: 12px; z-index: 10;
+      background: rgba(0,0,0,.55); color: #fff; padding: 10px 12px;
+      border-radius: 10px; line-height: 1.35; min-width: 260px;
+      backdrop-filter: blur(4px);
+    }
+    #hud b { color: #9ff; }
+    #center {
+      position: fixed; inset: 0; display: grid; place-items: center; z-index: 20;
+      pointer-events: none;
+    }
+    #panel {
+      pointer-events: auto;
+      width: min(560px, calc(100vw - 24px));
+      background: rgba(10,10,14,.78);
+      color: #fff; padding: 18px 18px; border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.45);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    #panel h1 { margin: 0 0 8px; font-size: 18px; }
+    #panel p { margin: 8px 0; opacity: .92; }
+    #panel code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; }
+    #btns { display:flex; gap:10px; flex-wrap: wrap; margin-top: 12px; }
+    button {
+      border: 0; border-radius: 10px; padding: 10px 12px; cursor: pointer;
+      background: #1f6feb; color: #fff; font-weight: 600;
+    }
+    button.secondary { background: rgba(255,255,255,.12); }
+    .small { font-size: 12px; opacity: .85; margin-top: 10px; }
   </style>
+ 
+  <!-- Import Three.js as an ES module (works on GitHub Pages) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
 </head>
+ 
 <body>
+  <div id="hud"></div>
  
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <div id="center">
+    <div id="panel">
+      <h1>🏁 3D Racing — Levels 1–3 + AI Opponent</h1>
+      <p><b>Goal:</b> reach the finish distance before the opponent (and don’t crash).</p>
+      <p><b>Controls:</b>
+        <code>←</code><code>→</code> change lane,
+        <code>↑</code> accelerate,
+        <code>↓</code> brake,
+        <code>R</code> restart,
+        <code>1</code><code>2</code><code>3</code> jump to level.
+      </p>
+      <p><b>Levels:</b> more lanes, faster speeds, more obstacles, smarter opponent.</p>
+      <div id="btns">
+        <button id="startBtn">Start (Level 1)</button>
+        <button class="secondary" id="lvl2Btn">Start Level 2</button>
+        <button class="secondary" id="lvl3Btn">Start Level 3</button>
+      </div>
+      <div class="small">Tip: upload this file to GitHub and enable GitHub Pages to play online.</div>
+    </div>
+  </div>
  
-<script>
-// SCENE
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+  <script type="module">
+    import * as THREE from "three";
  
-// CAMERA
-const camera = new THREE.PerspectiveCamera(
-  75, window.innerWidth / window.innerHeight, 0.1, 1000
-);
-camera.position.set(0, 5, 10);
+    // ----------------------------
+    // CONFIG: Levels 1, 2, 3
+    // ----------------------------
+    const LEVELS = {
+      1: {
+        name: "Level 1 (Easy)",
+        lanes: 2,
+        roadWidth: 7,
+        finishDistance: 800,
+        obstacleRate: 0.010,   // per frame chance
+        baseSpeed: 0.65,
+        maxSpeed: 1.05,
+        accel: 0.008,
+        brake: 0.020,
+        opponentBase: 0.62,
+        opponentSkill: 0.55
+      },
+      2: {
+        name: "Level 2 (Medium)",
+        lanes: 3,
+        roadWidth: 9,
+        finishDistance: 1100,
+        obstacleRate: 0.016,
+        baseSpeed: 0.75,
+        maxSpeed: 1.30,
+        accel: 0.010,
+        brake: 0.022,
+        opponentBase: 0.78,
+        opponentSkill: 0.75
+      },
+      3: {
+        name: "Level 3 (Hard)",
+        lanes: 4,
+        roadWidth: 11,
+        finishDistance: 1400,
+        obstacleRate: 0.022,
+        baseSpeed: 0.85,
+        maxSpeed: 1.55,
+        accel: 0.012,
+        brake: 0.024,
+        opponentBase: 0.92,
+        opponentSkill: 0.92
+      }
+    };
  
-// RENDERER
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+    // ----------------------------
+    // DOM
+    // ----------------------------
+    const hud = document.getElementById("hud");
+    const center = document.getElementById("center");
+    const startBtn = document.getElementById("startBtn");
+    const lvl2Btn = document.getElementById("lvl2Btn");
+    const lvl3Btn = document.getElementById("lvl3Btn");
  
-// LIGHT
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(5,10,7);
-scene.add(light);
+    // ----------------------------
+    // THREE SETUP
+    // ----------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87cfff);
  
-// ROAD
-const roadGeometry = new THREE.PlaneGeometry(10, 200);
-const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
-const road = new THREE.Mesh(roadGeometry, roadMaterial);
-road.rotation.x = -Math.PI / 2;
-scene.add(road);
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(0, 6.5, 12);
  
-// CAR (player)
-const carGeometry = new THREE.BoxGeometry(1,1,2);
-const carMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-const car = new THREE.Mesh(carGeometry, carMaterial);
-car.position.y = 0.5;
-scene.add(car);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
  
-// OBSTACLES
-let obstacles = [];
+    // lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.9);
+    sun.position.set(10, 20, 10);
+    scene.add(sun);
  
-function createObstacle() {
-  const geo = new THREE.BoxGeometry(1,1,2);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-  const obs = new THREE.Mesh(geo, mat);
-  obs.position.set((Math.random()*6 - 3), 0.5, -100);
-  scene.add(obs);
-  obstacles.push(obs);
-}
+    // ground beyond road
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 600),
+      new THREE.MeshStandardMaterial({ color: 0x2b7a3d })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0;
+    scene.add(ground);
  
-// CONTROLS
-let keys = {};
-document.addEventListener("keydown", (e) => keys[e.key] = true);
-document.addEventListener("keyup", (e) => keys[e.key] = false);
- 
-// GAME LOOP
-function animate() {
-  requestAnimationFrame(animate);
- 
-  // move car
-  if (keys["ArrowLeft"]) car.position.x -= 0.1;
-  if (keys["ArrowRight"]) car.position.x += 0.1;
- 
-  // move road (fake speed)
-  road.position.z += 0.5;
-  if (road.position.z > 100) road.position.z = 0;
- 
-  // spawn obstacles
-  if (Math.random() < 0.02) createObstacle();
- 
-  // move obstacles
-  obstacles.forEach((obs, index) => {
-    obs.position.z += 0.5;
- 
-    // collision
-    if (
-      Math.abs(obs.position.x - car.position.x) < 1 &&
-      Math.abs(obs.position.z - car.position.z) < 1
-    ) {
-      alert("Game Over!");
-      location.reload();
+    // road segments (looping)
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.9 });
+    const roadSegments = [];
+    function makeRoadSegment(width) {
+      const seg = new THREE.Mesh(new THREE.PlaneGeometry(width, 120), roadMat);
+      seg.rotation.x = -Math.PI / 2;
+      seg.position.y = 0.01;
+      return seg;
     }
  
-    // remove old obstacle
-    if (obs.position.z > 10) {
-      scene.remove(obs);
-      obstacles.splice(index, 1);
+    // lane markers group
+    const markers = new THREE.Group();
+    scene.add(markers);
+ 
+    // cars
+    const player = new THREE.Mesh(
+      new THREE.BoxGeometry(1.2, 0.8, 2.2),
+      new THREE.MeshStandardMaterial({ color: 0xff3b30, metalness: 0.1, roughness: 0.6 })
+    );
+    player.position.set(0, 0.45, 0);
+    scene.add(player);
+ 
+    const opponent = new THREE.Mesh(
+      new THREE.BoxGeometry(1.2, 0.8, 2.2),
+      new THREE.MeshStandardMaterial({ color: 0x3aa0ff, metalness: 0.1, roughness: 0.6 })
+    );
+    opponent.position.set(0, 0.45, -6);
+    scene.add(opponent);
+ 
+    // obstacles
+    const obstacles = [];
+    const obstacleGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+    const obstacleMat = new THREE.MeshStandardMaterial({ color: 0xffd400, roughness: 0.7 });
+ 
+    // ----------------------------
+    // GAME STATE
+    // ----------------------------
+    let level = 1;
+    let cfg = LEVELS[level];
+    let running = false;
+    let finished = false;
+    let message = "";
+ 
+    let playerSpeed = 0;
+    let opponentSpeed = 0;
+ 
+    let playerDistance = 0;
+    let opponentDistance = 0;
+ 
+    // lane state
+    let laneCount = cfg.lanes;
+    let laneIndexPlayer = 0;
+    let laneIndexOpp = 0;
+    let laneTargetPlayer = 0;
+    let laneTargetOpp = 0;
+ 
+    // input
+    const keys = Object.create(null);
+    window.addEventListener("keydown", (e) => {
+      keys[e.key] = true;
+ 
+      // quick level select
+      if (e.key === "1") startLevel(1);
+      if (e.key === "2") startLevel(2);
+      if (e.key === "3") startLevel(3);
+ 
+      if (e.key.toLowerCase() === "r") startLevel(level);
+    });
+    window.addEventListener("keyup", (e) => keys[e.key] = false);
+ 
+    // buttons
+    startBtn.onclick = () => startLevel(1);
+    lvl2Btn.onclick = () => startLevel(2);
+    lvl3Btn.onclick = () => startLevel(3);
+ 
+    function laneX(idx) {
+      // center lanes around x=0
+      const spacing = cfg.roadWidth / cfg.lanes;
+      const leftMost = -cfg.roadWidth / 2 + spacing / 2;
+      return leftMost + idx * spacing;
     }
-  });
  
-  // camera follows car
-  camera.position.x = car.position.x;
-  camera.lookAt(car.position);
+    function rebuildRoadAndMarkers() {
+      // clear old road segments
+      for (const seg of roadSegments) scene.remove(seg);
+      roadSegments.length = 0;
  
-  renderer.render(scene, camera);
-}
-animate();
-</script>
+      // create 3 segments to loop
+      const segA = makeRoadSegment(cfg.roadWidth);
+      const segB = makeRoadSegment(cfg.roadWidth);
+      const segC = makeRoadSegment(cfg.roadWidth);
+      segA.position.z = 0;
+      segB.position.z = -120;
+      segC.position.z = -240;
+      roadSegments.push(segA, segB, segC);
+      scene.add(segA, segB, segC);
  
-</body>
-</html>
+      // markers
+      markers.clear();
+      const markerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+      const dashGeo = new THREE.BoxGeometry(0.1, 0.05, 3);
+ 
+      // lane dividers (dashed)
+      for (let i = 1; i < cfg.lanes; i++) {
+        const x = -cfg.roadWidth / 2 + (cfg.roadWidth / cfg.lanes) * i;
+        for (let z = 0; z > -240; z -= 6) {
+          const dash = new THREE.Mesh(dashGeo, markerMat);
+          dash.position.set(x, 0.03, z);
+          markers.add(dash);
+        }
+      }
+ 
+      // road borders
+      const borderMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+      const borderGeo = new THREE.BoxGeometry(0.35, 0.2, 240);
+      const leftBorder = new THREE.Mesh(borderGeo, borderMat);
+      const rightBorder = new THREE.Mesh(borderGeo, borderMat);
+      leftBorder.position.set(-cfg.roadWidth / 2 - 0.2, 0.1, -120);
+      rightBorder.position.set(cfg.roadWidth / 2 + 0.2, 0.1, -120);
+      markers.add(leftBorder, rightBorder);
+    }
+ 
+    function clearObstacles() {
+      for (const o of obstacles) scene.remove(o.mesh);
+      obstacles.length = 0;
+    }
+ 
+    function spawnObstacle() {
+      const lane = Math.floor(Math.random() * cfg.lanes);
+      const mesh = new THREE.Mesh(obstacleGeo, obstacleMat);
+      mesh.position.set(laneX(lane), 0.6, -140);
+      scene.add(mesh);
+      obstacles.push({ mesh, lane });
+    }
+ 
+    function startLevel(lvl) {
+      level = lvl;
+      cfg = LEVELS[level];
+ 
+      laneCount = cfg.lanes;
+      laneIndexPlayer = Math.floor(cfg.lanes / 2);
+      laneTargetPlayer = laneIndexPlayer;
+ 
+      laneIndexOpp = Math.max(0, Math.min(cfg.lanes - 1, laneIndexPlayer + 1));
+      laneTargetOpp = laneIndexOpp;
+ 
+      // reset
+      running = true;
+      finished = false;
+      message = "";
+      center.style.display = "none";
+ 
+      playerSpeed = cfg.baseSpeed;
+      opponentSpeed = cfg.opponentBase;
+ 
+      playerDistance = 0;
+      opponentDistance = 0;
+ 
+      player.position.set(laneX(laneIndexPlayer), 0.45, 0);
+      opponent.position.set(laneX(laneIndexOpp), 0.45, -6);
+ 
+      rebuildRoadAndMarkers();
+      clearObstacles();
+    }
+ 
+    function endGame(text) {
+      running = false;
+      finished = true;
+      message = text;
+      center.style.display = "grid";
+      document.getElementById("panel").querySelector("h1").textContent = text;
+    }
+ 
+    // AI: pick lane to avoid obstacles in look-ahead range
+    function aiChooseLane(currentLane) {
+      const lookAheadMinZ = -35;
+      const lookAheadMaxZ = -6;
+ 
+      // detect if obstacle is in our lane soon
+      let danger = false;
+      for (const o of obstacles) {
+        const z = o.mesh.position.z;
+        if (o.lane === currentLane && z < lookAheadMaxZ && z > lookAheadMinZ) {
+          danger = true;
+          break;
+        }
+      }
+      if (!danger) return currentLane;
+ 
+      // find a safer lane (prefer nearer lanes)
+      const candidates = [];
+      for (let i = 0; i < cfg.lanes; i++) candidates.push(i);
+      candidates.sort((a, b) => Math.abs(a - currentLane) - Math.abs(b - currentLane));
+ 
+      for (const lane of candidates) {
+        let blocked = false;
+        for (const o of obstacles) {
+          const z = o.mesh.position.z;
+          if (o.lane === lane && z < lookAheadMaxZ && z > lookAheadMinZ) {
+            blocked = true; break;
+          }
+        }
+        if (!blocked) return lane;
+      }
+      return currentLane;
+    }
+ 
+    function aabbHit(a, b) {
+      // simple bounds check
+      const ap = a.position, bp = b.position;
+      const ax = 1.2/2, az = 2.2/2;
+      const bx = 1.2/2, bz = 1.2/2;
+      return Math.abs(ap.x - bp.x) < (ax + bx) && Math.abs(ap.z - bp.z) < (az + bz);
+    }
+ 
+    // ----------------------------
+    // MAIN LOOP
+    // ----------------------------
+    function animate() {
+      requestAnimationFrame(animate);
+ 
+      // camera follows player laterally; looks forward
+      camera.position.x = THREE.MathUtils.lerp(camera.position.x, player.position.x, 0.08);
+      camera.lookAt(new THREE.Vector3(player.position.x, 1.2, -18));
+ 
+      if (running) {
+        // INPUT: lane change (debounced by key edge-ish)
+        if (keys["ArrowLeft"]) { keys["ArrowLeft"] = false; laneTargetPlayer = Math.max(0, laneTargetPlayer - 1); }
+        if (keys["ArrowRight"]) { keys["ArrowRight"] = false; laneTargetPlayer = Math.min(cfg.lanes - 1, laneTargetPlayer + 1); }
+ 
+        // INPUT: speed control
+        if (keys["ArrowUp"]) playerSpeed = Math.min(cfg.maxSpeed, playerSpeed + cfg.accel);
+        else playerSpeed = Math.max(cfg.baseSpeed, playerSpeed - cfg.accel * 0.35);
+ 
+        if (keys["ArrowDown"]) playerSpeed = Math.max(0.35, playerSpeed - cfg.brake);
+ 
+        // opponent speed follows skill (slightly reactive)
+        const desiredOpp = cfg.opponentBase + (cfg.opponentSkill * 0.15);
+        opponentSpeed = THREE.MathUtils.lerp(opponentSpeed, desiredOpp, 0.01);
+ 
+        // distance progression
+        playerDistance += playerSpeed * 4.0;
+        opponentDistance += opponentSpeed * 4.0;
+ 
+        // loop road segments (move world toward camera)
+        const dz = playerSpeed * 1.2;
+        for (const seg of roadSegments) {
+          seg.position.z += dz;
+          if (seg.position.z > 60) seg.position.z -= 360;
+        }
+        // move markers + borders group
+        markers.position.z += dz;
  
